@@ -5,24 +5,24 @@ from a list of options.
 from __future__ import absolute_import, division, unicode_literals
 
 import re
-
 from collections import OrderedDict
 
 import param
+from bokeh.models.widgets import AutocompleteInput as _BkAutocompleteInput
+from bokeh.models.widgets import CheckboxButtonGroup as _BkCheckboxButtonGroup
+from bokeh.models.widgets import CheckboxGroup as _BkCheckboxGroup
+from bokeh.models.widgets import MultiChoice as _BkMultiChoice
+from bokeh.models.widgets import MultiSelect as _BkMultiSelect
+from bokeh.models.widgets import RadioButtonGroup as _BkRadioButtonGroup
+from bokeh.models.widgets import RadioGroup as _BkRadioBoxGroup
+from bokeh.models.widgets import Select as _BkSelect
 
-from bokeh.models.widgets import (
-    AutocompleteInput as _BkAutocompleteInput, CheckboxGroup as _BkCheckboxGroup,
-    CheckboxButtonGroup as _BkCheckboxButtonGroup, MultiSelect as _BkMultiSelect,
-    RadioButtonGroup as _BkRadioButtonGroup, RadioGroup as _BkRadioBoxGroup,
-    Select as _BkSelect, MultiChoice as _BkMultiChoice
-)
-
-from ..layout import Column, VSpacer
+from ..layout import Column, VSpacer, Row
 from ..models import SingleSelect as _BkSingleSelect
-from ..util import as_unicode, isIn, indexOf, bokeh_version
-from .base import Widget, CompositeWidget
-from .button import _ButtonBase, Button
-from .input import TextInput, TextAreaInput
+from ..util import as_unicode, bokeh_version, indexOf, isIn
+from .base import CompositeWidget, Widget
+from .button import Button, _ButtonBase
+from .input import TextAreaInput, TextInput, Checkbox
 
 
 class SelectBase(Widget):
@@ -579,3 +579,75 @@ class CrossSelector(CompositeWidget, MultiSelect):
 
     def _get_model(self, doc, root=None, parent=None, comm=None):
         return self._composite._get_model(doc, root, parent, comm)
+
+class TreeViewCheckBox(CompositeWidget):
+    _composite_type = Column
+    box_size = param.Number(default=100)
+    select_all = param.String()
+    select_options = param.List()
+
+    def __init__(self, select_all, select_options, **params):
+        super().__init__(**params)
+        try:
+            self.select_all=select_all
+        except NameError as n:
+            raise NameError("Define a dict containing the name of **select_all**")
+        except:
+            raise Exception
+
+        try:
+            self.select_options=select_options
+        except NameError as n:
+            raise NameError("Define a dict containing a list of options in **select_options**")
+        except:
+            raise Exception
+        TreeViewCheckBox.box_size = max([len(word) for word in self.select_options]+ [len(self.select_all), TreeViewCheckBox.box_size]) * 10
+
+        self.all_selector = Checkbox(name=self.select_all)
+        self.all_selector.param.watch(self._update_all, 'value')
+
+        self.selected_options = CheckBoxGroup(
+            name='Checkbox Group', value=[], options=self.select_options,
+        )
+        self.selected_options.param.watch(self._update_selected_options, 'value')
+
+        self.all_drop = Checkbox(css_classes=['chck-custom'])
+        self.all_drop.param.watch(self._show_drop_down, 'value')
+
+        # Define Layout
+        self._composite[:]  = [ #HTML(self._css_injection, width=0, height=0, margin=0, sizing_mode="fixed"),
+            Column(
+                Row(
+                    Row(
+                        self.all_selector, 
+                        max_width=self.box_size
+                    ), 
+                    self.all_drop
+                ), 
+                max_width=self.box_size
+            )
+        ]
+        
+        
+    def _update_all(self, event):
+        if self.all_selector.value:
+            self.selected_options.value = self.select_options
+            self.value = [self.all_selector.name] + self.select_options
+        else:
+            if len(self.select_options[:-1]) != len(self.selected_options.value):
+                self.selected_options.value = []
+                self.value = []
+
+    def _update_selected_options(self, event):
+        if len(self.select_options) == len(self.selected_options.value):
+            self.all_selector.value = True
+        else:
+            self.all_selector.value = False
+        self.value = self.selected_options.value
+
+    def _show_drop_down(self, event):
+        if self.all_drop.value:
+            self._composite.append(self.selected_options)
+        else:
+            self._composite[:] = self._composite[:-1]
+
