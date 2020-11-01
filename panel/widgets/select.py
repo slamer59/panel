@@ -580,29 +580,31 @@ class CrossSelector(CompositeWidget, MultiSelect):
     def _get_model(self, doc, root=None, parent=None, comm=None):
         return self._composite._get_model(doc, root, parent, comm)
 
-class TreeViewCheckBox(CompositeWidget):
+class TreeViewCheckBox(CompositeWidget, MultiSelect):
     _composite_type = Column
     box_size = param.Number(default=100)
     select_all = param.String()
     select_options = param.List()
 
-    def __init__(self, select_all, select_options, **params):
-        super().__init__(**params)
+    def __init__(self, **params):
+        super(TreeViewCheckBox, self).__init__(**params)
+        options = list(params.get('options', {}).keys())
+
         try:
-            self.select_all=select_all
+            self.select_all= options.pop(0)
         except NameError as n:
             raise NameError("Define a dict containing the name of **select_all**")
         except:
             raise Exception
-
+        
         try:
-            self.select_options=select_options
+            self.select_options= options
         except NameError as n:
             raise NameError("Define a dict containing a list of options in **select_options**")
         except:
             raise Exception
         TreeViewCheckBox.box_size = max([len(word) for word in self.select_options]+ [len(self.select_all), TreeViewCheckBox.box_size]) * 10
-
+        
         self.all_selector = Checkbox(name=self.select_all)
         self.all_selector.param.watch(self._update_all, 'value')
 
@@ -628,7 +630,6 @@ class TreeViewCheckBox(CompositeWidget):
             )
         ]
         
-        
     def _update_all(self, event):
         if self.all_selector.value:
             self.selected_options.value = self.select_options
@@ -637,7 +638,7 @@ class TreeViewCheckBox(CompositeWidget):
             if len(self.select_options[:-1]) != len(self.selected_options.value):
                 self.selected_options.value = []
                 self.value = []
-
+    
     def _update_selected_options(self, event):
         if len(self.select_options) == len(self.selected_options.value):
             self.all_selector.value = True
@@ -651,3 +652,5 @@ class TreeViewCheckBox(CompositeWidget):
         else:
             self._composite[:] = self._composite[:-1]
 
+    def _get_model(self, doc, root=None, parent=None, comm=None):
+        return self._composite._get_model(doc, root, parent, comm)
