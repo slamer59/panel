@@ -230,6 +230,13 @@ class AutocompleteInput(Widget):
 
     _rename = _AutocompleteInput_rename
 
+    def __init__(self, **params):
+        options = params.get('options')
+        if isinstance(options, OrderedDict):
+            params['options'] = list(params['options'].keys()) +[k.lower() for k in params['options'].keys()]
+        super(AutocompleteInput, self).__init__(**params)
+
+
 
 class _RadioGroupBase(SingleSelectBase):
 

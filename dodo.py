@@ -8,12 +8,12 @@ def task_pip_on_conda():
     """Experimental: provide pip build env via conda"""	
     return {'actions':[	
         # some ecosystem=pip build tools must be installed with conda when using conda...	
-        'conda install -y pip twine wheel',	
+        'mamba install -y pip twine wheel',	
         # ..and some are only available via conda-forge	
-        'conda install -y -c conda-forge tox virtualenv',	
+        'mamba install -y -c conda-forge tox virtualenv',	
     ]}
 
 
 def _build_dev(channel):
     channels = " ".join(['-c %s' % c for c in channel])
-    return "conda build %s conda.recipe/ --build-only" % channels
+    return "mamba build %s conda.recipe/ --build-only" % channels
